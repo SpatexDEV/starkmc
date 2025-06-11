@@ -1,0 +1,20 @@
+{
+	"discord":  {
+"discordToken":"MTAwNDI5MDgyMjQ0MDc1OTI5Ng.GMihCU.QcQy56gH5YxNXJRkolmA97wPI0T1dpLiD6m-P0",
+		 "discordLogChannelId": "1380887148546228325"
+	},
+	"client": {
+		"host": "Stark-MC.aternos.me",
+		"port": "62289",
+		"username": "StarkMCAdmin",
+		"password": "1234botamc"
+	},
+	
+	"! DO NOT EDIT BELOW !": "ONLY IF YOU KNOW WHAT YOU ARE DOING",
+	"logLevel": ["error", "log", "debug"],
+	"action": {
+		"commands": ["forward", "back", "left", "right", "jump"],
+		"holdDuration": 5000,
+		"retryDelay": 15000
+	}
+}
