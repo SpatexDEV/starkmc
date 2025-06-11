@@ -1,6 +1,7 @@
 import { Client, GatewayIntentBits, TextChannel, EmbedBuilder } from "discord.js";
 import CONFIG from "../config.json" assert { type: "json" };
-
+import dotenv from 'dotenv';
+dotenv.config();
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -43,7 +44,7 @@ export function initDiscord() {
     }
   });
 
-  client.login(CONFIG.discord.discordToken);
+  client.login(process.env.DISCORD_TOKEN);
 }
 
 export function sendDiscordLog(message: string) {
