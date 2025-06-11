@@ -1,7 +1,6 @@
 import { Client, GatewayIntentBits, TextChannel, EmbedBuilder } from "discord.js";
 import CONFIG from "../config.json" assert { type: "json" };
-import dotenv from 'dotenv';
-dotenv.config();
+
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
