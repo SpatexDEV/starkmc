@@ -1,6 +1,7 @@
+require('dotenv').config();
 {
 	"discord":  {
-"discordToken":process.env.discordToken,
+"discordToken": process.env.discordToken,
 		 "discordLogChannelId": "1380887148546228325"
 	},
 	"client": {
