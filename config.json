@@ -1,6 +1,6 @@
 {
 	"discord":  {
-"discordToken": process.env.discordToken,
+"discordToken": "MTAwNDI5MDgyMjQ0MDc1OTI5Ng.GDdfQM.QBCf-3y7dcVgeMQCtzzB1HCDvTBWkDKToN4CNo",
 		 "discordLogChannelId": "1380887148546228325"
 	},
 	"client": {
