@@ -18,6 +18,9 @@ const client = new Client({
 
 let logChannel: TextChannel | null = null;
 
+/* -------------------------------------------------------------------------- */
+/*                              Discord Başlatıcı                             */
+/* -------------------------------------------------------------------------- */
 export function initDiscord() {
   client.once("ready", async () => {
     console.log(`Discord bot logged in as ${client.user?.tag}`);
@@ -27,6 +30,7 @@ export function initDiscord() {
       activities: [{ name: "StarkMC 👀", type: 3 }],
     });
 
+    /* --------------------------- Log Kanalı Ayarı -------------------------- */
     const channel = client.channels.cache.get(CONFIG.discord.discordLogChannelId);
     if (channel && channel.isTextBased()) {
       logChannel = channel as TextChannel;
@@ -42,13 +46,15 @@ export function initDiscord() {
       console.error("Log channel not found!");
     }
 
-    // Slash komutları sıfırla ve yeniden oluştur
+    /* -------------------- Slash Komutları Temizle & Ekle ------------------- */
     try {
       const guild = client.guilds.cache.get(CONFIG.discord.guildId);
       if (!guild) throw new Error("Guild not found ‑ check CONFIG.discord.guildId");
 
+      // Tüm mevcut guild komutlarını sil -> "bozuk" komutlar kalmasın
       await guild.commands.set([]);
 
+      // Ardından ihtiyaç duyulan komutları tekrar ekle
       await guild.commands.create({
         name: "onlineplayers",
         description: "List current online players on StarkMC",
@@ -61,17 +67,24 @@ export function initDiscord() {
     }
   });
 
+  /* --------------------- Slash Komut Etkileşimi Dinleyicisi -------------------- */
   client.on("interactionCreate", async (interaction) => {
     if (!interaction.isChatInputCommand()) return;
     if (interaction.commandName !== "onlineplayers") return;
 
-    // Oyuncu listesini bot’tan al
     const players = getOnlinePlayers();
+
+    // Boş veya sadece boş isimlerden oluşan liste için güvenlik
+    const validPlayers = players.filter(p => p.trim().length > 0);
+    const description =
+      validPlayers.length > 0
+        ? validPlayers.join(", ")
+        : "Şu anda sunucuda kimse çevrim‑içi değil.";
 
     const embed = new EmbedBuilder()
       .setColor(0x3498db)
-      .setTitle("🌐 Online Players in StarkMC")
-      .setDescription(players.length ? players.join(", ") : "")
+      .setTitle("🌐 StarkMC’de Çevrim‑İçi Oyuncular")
+      .setDescription(description)
       .setTimestamp();
 
     await interaction.reply({ embeds: [embed], ephemeral: false }).catch(console.error);
@@ -80,6 +93,7 @@ export function initDiscord() {
   client.login(process.env.DISCORD_TOKEN);
 }
 
+/* --------------------------- Log Mesajı Gönderici -------------------------- */
 export function sendDiscordLog(message: string) {
   if (logChannel) {
     const embed = new EmbedBuilder()
