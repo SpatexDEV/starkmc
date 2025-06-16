@@ -19,13 +19,12 @@ const client = new Client({
 let logChannel: TextChannel | null = null;
 
 /* -------------------------------------------------------------------------- */
-/*                               BOT BAŞLATICI                                */
+/*                              Discord Başlatıcı                             */
 /* -------------------------------------------------------------------------- */
 export function initDiscord() {
   client.once("ready", async () => {
     console.log(`Discord bot logged in as ${client.user?.tag}`);
 
-    /* ----------------------------- Durum Mesajı ---------------------------- */
     client.user?.setPresence({
       status: "online",
       activities: [{ name: "StarkMC 👀", type: 3 }],
@@ -35,29 +34,34 @@ export function initDiscord() {
     const channel = client.channels.cache.get(CONFIG.discord.discordLogChannelId);
     if (channel && channel.isTextBased()) {
       logChannel = channel as TextChannel;
+
       const embed = new EmbedBuilder()
         .setColor(0x00ff00)
         .setTitle("🟢 Bot Active")
         .setDescription("The bot is active and the log channel is ready!")
         .setTimestamp();
+
       logChannel.send({ embeds: [embed] });
     } else {
       console.error("Log channel not found!");
     }
 
-    /* -------------------- /onlineplayers Slash Komutu Kayıt ------------------- */
+    /* -------------------- Slash Komutları Temizle & Ekle ------------------- */
     try {
       const guild = client.guilds.cache.get(CONFIG.discord.guildId);
-      if (!guild) throw new Error("Guild not found ‑ guildId yanlış mı?");
-      // Eğer komut zaten varsa tekrar eklemez
-      if (!guild.commands.cache.find((c) => c.name === "onlineplayers")) {
-        await guild.commands.create({
-          name: "onlineplayers",
-          description: "List current online players on StarkMC",
-          type: ApplicationCommandType.ChatInput,
-        });
-        console.log("Slash command /onlineplayers registered (guild scoped).");
-      }
+      if (!guild) throw new Error("Guild not found ‑ check CONFIG.discord.guildId");
+
+      // Tüm mevcut guild komutlarını sil -> "bozuk" komutlar kalmasın
+      await guild.commands.set([]);
+
+      // Ardından ihtiyaç duyulan komutları tekrar ekle
+      await guild.commands.create({
+        name: "onlineplayers",
+        description: "List current online players on StarkMC",
+        type: ApplicationCommandType.ChatInput,
+      });
+
+      console.log("Guild commands reset and /onlineplayers registered.");
     } catch (err) {
       console.error("Slash command register error:", err);
     }
@@ -79,21 +83,22 @@ export function initDiscord() {
       )
       .setTimestamp();
 
-    await interaction.reply({ embeds: [embed], ephemeral: false }).catch(console.error);
+    await interaction
+      .reply({ embeds: [embed], ephemeral: false })
+      .catch(console.error);
   });
 
   client.login(process.env.DISCORD_TOKEN);
 }
 
-/* -------------------------------------------------------------------------- */
-/*                         LOG MESAJI YARDIMCI FONKSİYONU                      */
-/* -------------------------------------------------------------------------- */
+/* --------------------------- Log Mesajı Gönderici -------------------------- */
 export function sendDiscordLog(message: string) {
   if (logChannel) {
     const embed = new EmbedBuilder()
       .setColor(0x3498db)
       .setDescription(message)
       .setTimestamp();
+
     logChannel.send({ embeds: [embed] }).catch(console.error);
   } else {
     console.warn("The Discord log channel has not been set up yet.");
