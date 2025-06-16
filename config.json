@@ -1,6 +1,7 @@
 {
   "discord": {
-    "discordLogChannelId": "1380887148546228325"
+    "discordLogChannelId": "1380887148546228325",
+    "guildId":"1009012335412781079"
   },
   "client": {
     "host": "Stark-MC.aternos.me",
