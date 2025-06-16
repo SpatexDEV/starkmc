@@ -1,99 +1,128 @@
-import Mineflayer from 'mineflayer';
+import Mineflayer from "mineflayer";
 import { sleep, getRandom } from "./utils.ts";
-import CONFIG from "../config.json" assert {type: 'json'};
+import CONFIG from "../config.json" assert { type: "json" };
 import { sendDiscordLog } from "./discord.ts";
 import { EmbedBuilder } from "discord.js";
+
 let loop: NodeJS.Timeout;
 let bot: Mineflayer.Bot;
 
+/* -------------------------------------------------------------------------- */
+/*                               Bağlantı Yönetimi                            */
+/* -------------------------------------------------------------------------- */
 const disconnect = (): void => {
-	clearInterval(loop);
-	bot?.quit?.();
-	bot?.end?.();
+  clearInterval(loop);
+  bot?.quit?.();
+  bot?.end?.();
 };
 
 const reconnect = async (): Promise<void> => {
-	console.log(`Trying to reconnect in ${CONFIG.action.retryDelay / 1000} seconds...\n`);
-
-	disconnect();
-	await sleep(CONFIG.action.retryDelay);
-	createBot();
+  console.log(`Trying to reconnect in ${CONFIG.action.retryDelay / 1000} seconds...\n`);
+  disconnect();
+  await sleep(CONFIG.action.retryDelay);
+  createBot();
 };
 
+/* -------------------------------------------------------------------------- */
+/*                               AFK Hareket Döngüsü                          */
+/* -------------------------------------------------------------------------- */
 const startAfkMovement = (): void => {
-	const changePos = async (): Promise<void> => {
-		const lastAction = getRandom(CONFIG.action.commands) as Mineflayer.ControlState;
-		const halfChance: boolean = Math.random() < 0.5;
+  const changePos = async (): Promise<void> => {
+    const lastAction = getRandom(CONFIG.action.commands) as Mineflayer.ControlState;
+    const halfChance = Math.random() < 0.5; // Rastgele sprint
 
-		console.debug(`${lastAction}${halfChance ? " with sprinting" : ''}`);
+    console.debug(`${lastAction}${halfChance ? " with sprinting" : ""}`);
 
-		bot.setControlState('sprint', halfChance);
-		bot.setControlState(lastAction, true);
+    bot.setControlState("sprint", halfChance);
+    bot.setControlState(lastAction, true);
 
-		await sleep(CONFIG.action.holdDuration);
-		bot.clearControlStates();
-	};
-	const changeView = async (): Promise<void> => {
-		const yaw = (Math.random() * Math.PI) - (0.5 * Math.PI);
-		const pitch = (Math.random() * Math.PI) - (0.5 * Math.PI);
+    await sleep(CONFIG.action.holdDuration);
+    bot.clearControlStates();
+  };
 
-		await bot.look(yaw, pitch, false);
-	};
+  const changeView = async (): Promise<void> => {
+    const yaw = Math.random() * Math.PI - 0.5 * Math.PI;
+    const pitch = Math.random() * Math.PI - 0.5 * Math.PI;
+    await bot.look(yaw, pitch, false);
+  };
 
-	loop = setInterval(() => {
-		changeView();
-		changePos();
-	}, CONFIG.action.holdDuration);
+  // Daha “insansı” aralıklarla döngü
+  const loopAction = async (): Promise<void> => {
+    await changeView();
+    await changePos();
+    setTimeout(
+      loopAction,
+      CONFIG.action.holdDuration + Math.random() * 2_000,
+    ); // +0‑2 sn oynama
+  };
+  loopAction();
 };
 
+/* -------------------------------------------------------------------------- */
+/*                                  Bot Kur                                   */
+/* -------------------------------------------------------------------------- */
 const createBot = (): void => {
-	bot = Mineflayer.createBot({
-		host: CONFIG.client.host,
-		port: +CONFIG.client.port,
-		username: CONFIG.client.username
-	} as const);
+  bot = Mineflayer.createBot({
+    host: CONFIG.client.host,
+    port: +CONFIG.client.port,
+    username: CONFIG.client.username,
+  } as const);
 
-	bot.once('error', error => {
-		console.error(`StarkMC Admin got an error: ${error}`);
-		sendDiscordLog(`❌ StarkMC Admin error: ${error.message || error}`);
-	});
-	bot.once('kicked', rawResponse => {
-		console.error(`\n\StarkMC Admin is disconnected: ${rawResponse}`);
-		sendDiscordLog(`⚠️ StarkMC Admin kicked from server: ${rawResponse.toString()}`);
-	});
-	bot.once('end', () => {
-		sendDiscordLog(`❌ StarkMC Admin disconnected, reconnecting...`);
-		reconnect();
-	});
+  /* ------------------------- Temel Olay Dinleyicileri ------------------------ */
+  bot.once("error", (error) => {
+    console.error(`StarkMC Admin got an error: ${error}`);
+    sendDiscordLog(`❌ StarkMC Admin error: ${error.message || error}`);
+  });
 
+  bot.once("kicked", (rawResponse) => {
+    console.error(`\nStarkMC Admin is disconnected: ${rawResponse}`);
+    sendDiscordLog(`⚠️ StarkMC Admin kicked from server: ${rawResponse.toString()}`);
+  });
 
-	
-	bot.once('spawn', async () => {
-		sendDiscordLog(`✅ StarkMC Admin Joined StarkMC Successuflly: **${bot.username}**`);
+  bot.once("end", () => {
+    sendDiscordLog("❌ StarkMC Admin disconnected, reconnecting...");
+    reconnect();
+  });
 
-		const password = CONFIG.client.password;
-		bot.chat(`/register ${password} ${password}`);
+  /* ----------------------------- Sunucuya Giriş ----------------------------- */
+  bot.once("spawn", async () => {
+    sendDiscordLog(`✅ StarkMC Admin joined: **${bot.username}**`);
 
-		await sleep(3000);
-		bot.chat(`/login ${password}`);
+    const password = CONFIG.client.password;
+    bot.chat(`/register ${password} ${password}`);
+    await sleep(3_000);
+    bot.chat(`/login ${password}`);
 
-		startAfkMovement();
+    startAfkMovement();
 
-		// Oyuncu giriş çıkışlarını takip et
-		bot.on("playerJoined", (player) => {
-			sendDiscordLog(`🟢 Player logged to starkmc: **${player.username}**`);
-		});
-		bot.on("playerLeft", (player) => {
-			sendDiscordLog(`🔴 Player left from starkmc **${player.username}**`);
-		});
-	});
+    bot.on("playerJoined", (player) => {
+      sendDiscordLog(`🟢 Player joined StarkMC: **${player.username}**`);
+    });
 
-	bot.once('login', () => {
-		console.log(`StarkMC Manger logged in as ${bot.username}`);
-		sendDiscordLog(`🟢 StarkMC Manger successfully logged in: **${bot.username}**`);
-	});
+    bot.on("playerLeft", (player) => {
+      sendDiscordLog(`🔴 Player left StarkMC: **${player.username}**`);
+    });
+  });
+
+  bot.once("login", () => {
+    console.log(`StarkMC Manager logged in as ${bot.username}`);
+    sendDiscordLog(`🟢 StarkMC Manager successfully logged in: **${bot.username}**`);
+  });
 };
 
+/* -------------------------------------------------------------------------- */
+/*                       ÇEVRİM‑İÇİ OYUNCU LİSTESİ API                         */
+/* -------------------------------------------------------------------------- */
+export const getOnlinePlayers = (): string[] => {
+  if (!bot || !bot.players) return [];
+  return Object.values(bot.players)
+    .filter((p) => p.username && p.username !== bot.username)
+    .map((p) => p.username as string);
+};
+
+/* -------------------------------------------------------------------------- */
+/*                              Dışa Aktarılan Başlatıcı                      */
+/* -------------------------------------------------------------------------- */
 export default (): void => {
-	createBot();
+  createBot();
 };
