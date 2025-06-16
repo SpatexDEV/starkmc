@@ -115,11 +115,11 @@ const createBot = (): void => {
 /* -------------------------------------------------------------------------- */
 export const getOnlinePlayers = (): string[] => {
   if (!bot || !bot.players) return [];
-  return Object.values(bot.players)
-    .filter((p) => p.username && p.username !== bot.username)
-    .map((p) => p.username as string);
-};
 
+  // bot.players: { [username]: Player }
+  // Anahtar adları doğrudan oyuncu isimleridir
+  return Object.keys(bot.players).filter((name) => name !== bot.username);
+};
 /* -------------------------------------------------------------------------- */
 /*                              Dışa Aktarılan Başlatıcı                      */
 /* -------------------------------------------------------------------------- */
